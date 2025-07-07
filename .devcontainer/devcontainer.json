@@ -22,7 +22,7 @@
         "ms-vscode.vscode-typescript-next"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
         "python.formatting.provider": "black",
         "python.linting.enabled": true,
         "python.linting.flake8Enabled": true,
@@ -34,7 +34,7 @@
       }
     }
   },
-  "forwardPorts": [8000, 8501, 5432, 6379],
-  "postCreateCommand": "uv sync --dev && pre-commit install",
+  "forwardPorts": [8000, 8501, 5433, 6380],
+  "postCreateCommand": "uv sync --dev && uv pip install pre-commit && uv run pre-commit install",
   "remoteUser": "vscode"
 }

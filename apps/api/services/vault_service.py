@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 import structlog
 
-from libs.models import VaultDB, VaultCreate, Vault, VaultStatus
+from libs.models.vault import VaultDB, VaultCreate, Vault, VaultStatus
 
 
 logger = structlog.get_logger()
@@ -15,10 +15,10 @@ logger = structlog.get_logger()
 
 class VaultService:
     """Service for managing vaults."""
-    
+
     def __init__(self, db: Session):
         self.db = db
-    
+
     async def create_vault(self, vault_data: VaultCreate) -> Vault:
         """Create a new vault."""
         db_vault = VaultDB(
@@ -28,24 +28,22 @@ class VaultService:
             storage_path=vault_data.storage_path,
             status=VaultStatus.UPLOADED,
         )
-        
+
         self.db.add(db_vault)
         self.db.commit()
         self.db.refresh(db_vault)
-        
+
         return Vault.from_orm(db_vault)
-    
+
     async def get_vault(self, vault_id: str) -> Optional[Vault]:
         """Get vault by ID."""
-        db_vault = self.db.query(VaultDB).filter(
-            VaultDB.id == UUID(vault_id)
-        ).first()
-        
+        db_vault = self.db.query(VaultDB).filter(VaultDB.id == UUID(vault_id)).first()
+
         if not db_vault:
             return None
-        
+
         return Vault.from_orm(db_vault)
-    
+
     async def get_vaults(self, skip: int = 0, limit: int = 100) -> List[Vault]:
         """Get list of vaults."""
         db_vaults = (
@@ -55,50 +53,46 @@ class VaultService:
             .limit(limit)
             .all()
         )
-        
+
         return [Vault.from_orm(vault) for vault in db_vaults]
-    
+
     async def update_vault_status(
-        self, 
-        vault_id: str, 
+        self,
+        vault_id: str,
         status: VaultStatus,
         error_message: Optional[str] = None,
         file_count: Optional[int] = None,
         processed_files: Optional[int] = None,
     ) -> Optional[Vault]:
         """Update vault status."""
-        db_vault = self.db.query(VaultDB).filter(
-            VaultDB.id == UUID(vault_id)
-        ).first()
-        
+        db_vault = self.db.query(VaultDB).filter(VaultDB.id == UUID(vault_id)).first()
+
         if not db_vault:
             return None
-        
-        db_vault.status = status
-        
+
+        db_vault.status = status  # type: ignore
+
         if error_message is not None:
-            db_vault.error_message = error_message
-        
+            db_vault.error_message = error_message  # type: ignore
+
         if file_count is not None:
-            db_vault.file_count = file_count
-        
+            db_vault.file_count = file_count  # type: ignore
+
         if processed_files is not None:
-            db_vault.processed_files = processed_files
-        
+            db_vault.processed_files = processed_files  # type: ignore
+
         self.db.commit()
         self.db.refresh(db_vault)
-        
+
         return Vault.from_orm(db_vault)
-    
+
     async def delete_vault(self, vault_id: str) -> bool:
         """Delete vault and its files."""
-        db_vault = self.db.query(VaultDB).filter(
-            VaultDB.id == UUID(vault_id)
-        ).first()
-        
+        db_vault = self.db.query(VaultDB).filter(VaultDB.id == UUID(vault_id)).first()
+
         if not db_vault:
             return False
-        
+
         # Delete files from storage
         try:
             vault_dir = os.path.dirname(db_vault.storage_path)
@@ -106,13 +100,11 @@ class VaultService:
                 shutil.rmtree(vault_dir)
         except Exception as e:
             logger.error(
-                "Failed to delete vault files",
-                vault_id=vault_id,
-                error=str(e)
+                "Failed to delete vault files", vault_id=vault_id, error=str(e)
             )
-        
+
         # Delete from database
         self.db.delete(db_vault)
         self.db.commit()
-        
+
         return True

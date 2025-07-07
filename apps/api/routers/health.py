@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 import redis
 import structlog
+from typing import Any
 
 from libs.database import get_db
 from ..config import settings
@@ -13,20 +14,20 @@ logger = structlog.get_logger()
 
 
 @router.get("/")
-async def health_check():
+async def health_check() -> dict[str, str]:
     """Basic health check."""
     return {"status": "healthy", "service": "secondbrain-api"}
 
 
 @router.get("/detailed")
-async def detailed_health_check(db: Session = Depends(get_db)):
+async def detailed_health_check(db: Session = Depends(get_db)) -> dict[str, Any]:
     """Detailed health check including dependencies."""
     checks = {
         "api": "healthy",
         "database": "unknown",
         "redis": "unknown",
     }
-    
+
     # Check database
     try:
         db.execute(text("SELECT 1"))
@@ -34,7 +35,7 @@ async def detailed_health_check(db: Session = Depends(get_db)):
     except Exception as e:
         logger.error("Database health check failed", error=str(e))
         checks["database"] = "unhealthy"
-    
+
     # Check Redis
     try:
         r = redis.from_url(settings.REDIS_URL)
@@ -43,13 +44,11 @@ async def detailed_health_check(db: Session = Depends(get_db)):
     except Exception as e:
         logger.error("Redis health check failed", error=str(e))
         checks["redis"] = "unhealthy"
-    
-    overall_status = "healthy" if all(
-        status == "healthy" for status in checks.values()
-    ) else "unhealthy"
-    
-    return {
-        "status": overall_status,
-        "checks": checks,
-        "service": "secondbrain-api"
-    }
+
+    overall_status = (
+        "healthy"
+        if all(status == "healthy" for status in checks.values())
+        else "unhealthy"
+    )
+
+    return {"status": overall_status, "checks": checks, "service": "secondbrain-api"}

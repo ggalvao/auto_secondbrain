@@ -12,8 +12,12 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+
 def get_url():
-    return os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/secondbrain")
+    return os.getenv(
+        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/secondbrain"
+    )
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
@@ -28,24 +32,28 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     configuration = config.get_section(config.config_ini_section)
-    configuration["sqlalchemy.url"] = get_url()
-    
-    connectable = engine_from_config(
-        configuration,
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-
-    with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
+    if configuration:
+        configuration["sqlalchemy.url"] = get_url()
+        connectable = engine_from_config(
+            configuration,
+            prefix="sqlalchemy.",
+            poolclass=pool.NullPool,
         )
 
-        with context.begin_transaction():
-            context.run_migrations()
+        with connectable.connect() as connection:
+            context.configure(connection=connection, target_metadata=target_metadata)
+
+            with context.begin_transaction():
+                context.run_migrations()
+    else:
+        # Handle the case where configuration is None,
+        # maybe log an error or raise an exception
+        pass
+
 
 if context.is_offline_mode():
     run_migrations_offline()

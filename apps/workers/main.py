@@ -1,9 +1,7 @@
-import os
 from celery import Celery
 import structlog
 
 from .config import settings
-from .tasks import vault_processing
 
 
 logger = structlog.get_logger()
@@ -15,7 +13,7 @@ celery_app = Celery(
     backend=settings.REDIS_URL,
     include=[
         "apps.workers.tasks.vault_processing",
-    ]
+    ],
 )
 
 # Configure Celery
@@ -34,9 +32,14 @@ celery_app.conf.update(
 # Task routing
 celery_app.conf.task_routes = {
     "apps.workers.tasks.vault_processing.process_vault": {"queue": "vault_processing"},
-    "apps.workers.tasks.vault_processing.extract_vault_files": {"queue": "vault_processing"},
-    "apps.workers.tasks.vault_processing.analyze_vault_content": {"queue": "vault_processing"},
+    "apps.workers.tasks.vault_processing.extract_vault_files": {
+        "queue": "vault_processing"
+    },
+    "apps.workers.tasks.vault_processing.analyze_vault_content": {
+        "queue": "vault_processing"
+    },
 }
+
 
 # Configure logging
 @celery_app.on_after_configure.connect
