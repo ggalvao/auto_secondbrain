@@ -1,4 +1,7 @@
+"""Configuration settings for the API application."""
+
 from typing import List
+
 from pydantic_settings import BaseSettings
 
 
@@ -34,6 +37,8 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
 
     class Config:
+        """Pydantic configuration for settings."""
+
         env_file = ".env"
         case_sensitive = True
 

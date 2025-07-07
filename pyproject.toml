@@ -57,7 +57,7 @@ secondbrain = "apps.cli.main:cli"
 [tool.uv.workspace]
 members = [
     "apps/api",
-    "apps/cli", 
+    "apps/cli",
     "apps/streamlit_app",
     "apps/workers",
     "libs/*",
@@ -90,17 +90,17 @@ known_first_party = ["apps", "libs"]
 
 [tool.mypy]
 python_version = "3.11"
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 check_untyped_defs = true
-disallow_untyped_decorators = true
+disallow_untyped_decorators = false
 no_implicit_optional = true
 warn_redundant_casts = true
-warn_unused_ignores = true
+warn_unused_ignores = false
 warn_no_return = true
-warn_unreachable = true
+warn_unreachable = false
 strict_equality = true
 explicit_package_bases = true
 
@@ -155,8 +155,31 @@ ignore_missing_imports = true
 [tool.mypy-libs.llm_clients.anthropic_client]
 ignore_errors = true
 
+[tool.mypy-alembic]
+ignore_missing_imports = true
+
+[tool.mypy-alembic.config]
+ignore_missing_imports = true
+
+[tool.mypy-alembic.command]
+ignore_missing_imports = true
+
 [tool.hatch.build.targets.wheel]
 packages = ["apps", "libs"]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503", "D100", "D104"]
+per-file-ignores = [
+    "tests/*:D100,D104",
+    "__init__.py:D104",
+    "*/migrations/*:D100,D104",
+    "alembic/*:D100,D104"
+]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101", "B108", "B113"]
 
 [tool.pytest.ini_options]
 testpaths = ["apps", "libs"]

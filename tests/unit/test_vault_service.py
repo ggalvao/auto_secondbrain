@@ -1,9 +1,12 @@
-# pyright: ignore
-import pytest
+"""Unit tests for the VaultService."""
+
 from uuid import uuid4
 
-from libs.models.vault import VaultCreate, VaultStatus
+import pytest
+from sqlalchemy.orm import Session
+
 from apps.api.services.vault_service import VaultService
+from libs.models.vault import VaultCreate, VaultStatus
 
 
 @pytest.mark.unit
@@ -11,7 +14,7 @@ class TestVaultService:
     """Test vault service functionality."""
 
     @pytest.mark.asyncio
-    async def test_create_vault(self, test_db) -> None:
+    async def test_create_vault(self, test_db: Session) -> None:
         """Test creating a new vault."""
         service = VaultService(test_db)
 
@@ -30,7 +33,7 @@ class TestVaultService:
         assert vault.status == VaultStatus.UPLOADED
 
     @pytest.mark.asyncio
-    async def test_get_vault_not_found(self, test_db) -> None:
+    async def test_get_vault_not_found(self, test_db: Session) -> None:
         """Test getting a non-existent vault."""
         service = VaultService(test_db)
 
@@ -39,7 +42,7 @@ class TestVaultService:
         assert vault is None
 
     @pytest.mark.asyncio
-    async def test_get_vaults_empty(self, test_db) -> None:
+    async def test_get_vaults_empty(self, test_db: Session) -> None:
         """Test getting vaults when none exist."""
         service = VaultService(test_db)
 
@@ -48,7 +51,7 @@ class TestVaultService:
         assert len(vaults) == 0
 
     @pytest.mark.asyncio
-    async def test_update_vault_status(self, test_db) -> None:
+    async def test_update_vault_status(self, test_db: Session) -> None:
         """Test updating vault status."""
         service = VaultService(test_db)
 
@@ -68,5 +71,5 @@ class TestVaultService:
         )
 
         assert updated_vault is not None
-        assert updated_vault.status == VaultStatus.PROCESSING  # type: ignore
-        assert updated_vault.file_count == 10  # type: ignore
+        assert updated_vault.status == VaultStatus.PROCESSING
+        assert updated_vault.file_count == 10

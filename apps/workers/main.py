@@ -1,8 +1,11 @@
-from celery import Celery
+"""Celery worker application for SecondBrain."""
+
+from typing import Any
+
 import structlog
+from celery import Celery
 
 from .config import settings
-
 
 logger = structlog.get_logger()
 
@@ -43,14 +46,14 @@ celery_app.conf.task_routes = {
 
 # Configure logging
 @celery_app.on_after_configure.connect
-def setup_periodic_tasks(sender, **kwargs):
-    """Setup periodic tasks."""
+def setup_periodic_tasks(sender: Any, **kwargs: Any) -> None:
+    """Set up periodic tasks."""
     # Add periodic tasks here if needed
     pass
 
 
 @celery_app.task(bind=True)
-def debug_task(self):
+def debug_task(self: Any) -> str:
     """Debug task for testing."""
     logger.info("Debug task called", task_id=self.request.id)
     return f"Request: {self.request!r}"

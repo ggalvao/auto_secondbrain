@@ -1,3 +1,5 @@
+"""Worker configuration settings."""
+
 from pydantic_settings import BaseSettings
 
 
@@ -28,6 +30,8 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
 
     class Config:
+        """Pydantic configuration."""
+
         env_file = ".env"
         case_sensitive = True
 

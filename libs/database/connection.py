@@ -1,10 +1,12 @@
+"""Database connection and session management."""
+
 import os
-from typing import Generator, AsyncGenerator, Optional, cast
-from contextlib import contextmanager, asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
+from typing import AsyncGenerator, Generator, Optional, cast
 
 from sqlalchemy import create_engine
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from libs.models.base import Base
 
@@ -13,6 +15,7 @@ class DatabaseManager:
     """Manages database connections and sessions."""
 
     def __init__(self, database_url: Optional[str] = None):
+        """Initialize the database manager."""
         self.database_url = database_url or os.getenv(
             "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/secondbrain"
         )
@@ -81,14 +84,14 @@ class DatabaseManager:
 
 @contextmanager
 def get_db() -> Generator[Session, None, None]:
-    """FastAPI dependency for database sessions."""
+    """Get database session for FastAPI dependency."""
     db_manager = DatabaseManager()
     with db_manager.get_session() as session:
         yield session
 
 
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency for async database sessions."""
+    """Get async database session for FastAPI dependency."""
     db_manager = DatabaseManager()
     async with db_manager.get_async_session() as session:
         yield session

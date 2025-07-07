@@ -1,6 +1,9 @@
+"""Base classes and interfaces for vector databases."""
+
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 
 

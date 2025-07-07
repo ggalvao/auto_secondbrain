@@ -1,13 +1,16 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from sqlalchemy import text
-import redis
-import structlog
+"""Health check endpoints for the API."""
+
 from typing import Any
 
-from libs.database import get_db
-from ..config import settings
+import redis  # type: ignore
+import structlog
+from fastapi import APIRouter, Depends
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
+from libs.database import get_db
+
+from ..config import settings
 
 router = APIRouter()
 logger = structlog.get_logger()
@@ -15,13 +18,13 @@ logger = structlog.get_logger()
 
 @router.get("/")
 async def health_check() -> dict[str, str]:
-    """Basic health check."""
+    """Perform a basic health check."""
     return {"status": "healthy", "service": "secondbrain-api"}
 
 
 @router.get("/detailed")
 async def detailed_health_check(db: Session = Depends(get_db)) -> dict[str, Any]:
-    """Detailed health check including dependencies."""
+    """Perform a detailed health check including dependencies."""
     checks = {
         "api": "healthy",
         "database": "unknown",

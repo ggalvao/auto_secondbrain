@@ -1,15 +1,20 @@
+"""Test configuration and fixtures for the SecondBrain project."""
+
 # mypy: ignore-errors
-import pytest
-import tempfile
 import shutil
+import tempfile
 from pathlib import Path
+
+import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from fastapi.testclient import TestClient
 
-from libs.models.base import Base
-from apps.api.main import app
+from apps.api.main import app, settings
 from libs.database.connection import get_db
+
+# Import DB models to register them with SQLAlchemy
+from libs.models.base import Base
 
 
 @pytest.fixture
@@ -20,30 +25,59 @@ def temp_dir() -> Path:
     shutil.rmtree(temp_dir)
 
 
-@pytest.fixture
-def test_db() -> sessionmaker:  # type: ignore
-    """Create a test database."""
+@pytest.fixture(scope="function")
+def test_engine(request):
+    """Create a test database engine."""
+    # Ensure models are imported and registered
+    from libs.models.processing import ProcessingJobDB  # noqa
+    from libs.models.vault import VaultDB  # noqa
+
+    # Use a named in-memory database that can be shared across connections
+    db_name = f"test_{id(request)}"
     engine = create_engine(
-        "sqlite:///:memory:", connect_args={"check_same_thread": False}
+        f"sqlite:///{db_name}?mode=memory&cache=shared&uri=true",
+        connect_args={"check_same_thread": False, "uri": True},
     )
 
     Base.metadata.create_all(bind=engine)
 
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    def finalizer():
+        Base.metadata.drop_all(bind=engine)
+        engine.dispose()
 
+    request.addfinalizer(finalizer)
+    return engine
+
+
+@pytest.fixture(scope="function")
+def test_db(test_engine):
+    """Create a test database session."""
+    TestingSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=test_engine
+    )
     db = TestingSessionLocal()
+
     try:
         yield db
     finally:
         db.close()
 
 
-@pytest.fixture
-def api_client(test_db) -> TestClient:  # type: ignore
+@pytest.fixture(scope="function")
+def api_client(test_engine, monkeypatch) -> TestClient:  # type: ignore
     """Create FastAPI test client."""
+    storage_path = tempfile.mkdtemp()
+    monkeypatch.setattr(settings, "VAULT_STORAGE_PATH", storage_path)
 
     def override_get_db():
-        yield test_db
+        TestingSessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=test_engine
+        )
+        db = TestingSessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
 
     app.dependency_overrides[get_db] = override_get_db
 
@@ -51,6 +85,7 @@ def api_client(test_db) -> TestClient:  # type: ignore
         yield client
 
     app.dependency_overrides.clear()
+    shutil.rmtree(storage_path)
 
 
 @pytest.fixture

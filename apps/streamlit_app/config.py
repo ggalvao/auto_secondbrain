@@ -1,3 +1,5 @@
+"""Streamlit app configuration settings."""
+
 from pydantic_settings import BaseSettings
 
 
@@ -12,6 +14,8 @@ class Settings(BaseSettings):
     PAGE_ICON: str = "🧠"
 
     class Config:
+        """Pydantic configuration."""
+
         env_file = ".env"
         case_sensitive = True
 

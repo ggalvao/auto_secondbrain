@@ -1,16 +1,22 @@
-import os
-from typing import List, Dict, Any, Optional
+"""OpenAI client implementation."""
+
 import json
-from tenacity import retry, stop_after_attempt, wait_exponential
+import os
+from typing import Any, Dict, List, Optional
+
 import openai
+from tenacity import retry, stop_after_attempt, wait_exponential
 
-from .base import LLMClient, LLMResponse
+from .base import BaseLLMClient, LLMResponse
 
 
-class OpenAIClient(LLMClient):
-    """OpenAI API client."""
+class OpenAIClient(BaseLLMClient):
+    """OpenAI client for text generation."""
 
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-3.5-turbo"):
+    def __init__(
+        self, api_key: Optional[str] = None, model: str = "gpt-3.5-turbo"
+    ) -> None:
+        """Initialize the OpenAI client."""
         self.api_key: Optional[str] = api_key or os.getenv("OPENAI_API_KEY", "")
         self.model: str = model
         self.client = openai.AsyncOpenAI(api_key=self.api_key)
@@ -30,7 +36,7 @@ class OpenAIClient(LLMClient):
         """Chat with OpenAI using messages."""
         response = await self.client.chat.completions.create(
             model=kwargs.get("model", self.model),
-            messages=messages,  # type: ignore
+            messages=messages,
             temperature=kwargs.get("temperature", 0.7),
             max_tokens=kwargs.get("max_tokens", 1000),
         )
@@ -51,12 +57,12 @@ class OpenAIClient(LLMClient):
 
     async def extract_keywords(self, text: str, **kwargs: Any) -> List[str]:
         """Extract keywords from text."""
-        prompt: str = f"""Extract the most important keywords and phrases from the following text. 
-        Return them as a JSON list of strings.
-        
-        Text: {text}
-        
-        Keywords (JSON format):"""
+        prompt: str = (
+            "Extract the most important keywords and phrases from the following text.\n"
+            "Return them as a JSON list of strings.\n\n"
+            f"Text: {text}\n\n"
+            "Keywords (JSON format):"
+        )
 
         response = await self.generate_text(prompt, **kwargs)
 
@@ -72,11 +78,12 @@ class OpenAIClient(LLMClient):
     ) -> str:
         """Classify text into one of the given categories."""
         categories_str: str = ", ".join(categories)
-        prompt: str = f"""Classify the following text into one of these categories: {categories_str}
-        
-        Text: {text}
-        
-        Category:"""
+        prompt: str = (
+            f"Classify the following text into one of these categories: "
+            f"{categories_str}\n\n"
+            f"Text: {text}\n\n"
+            "Category:"
+        )
 
         response = await self.generate_text(prompt, **kwargs)
 

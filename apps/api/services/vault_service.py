@@ -1,14 +1,15 @@
+"""Service layer for managing vaults."""
+
 import os
 import shutil
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
 import structlog
+from sqlalchemy import desc
+from sqlalchemy.orm import Session
 
-from libs.models.vault import VaultDB, VaultCreate, Vault, VaultStatus
-
+from libs.models.vault import Vault, VaultCreate, VaultDB, VaultStatus
 
 logger = structlog.get_logger()
 
@@ -17,6 +18,7 @@ class VaultService:
     """Service for managing vaults."""
 
     def __init__(self, db: Session):
+        """Initialize the VaultService with a database session."""
         self.db = db
 
     async def create_vault(self, vault_data: VaultCreate) -> Vault:
@@ -70,16 +72,16 @@ class VaultService:
         if not db_vault:
             return None
 
-        db_vault.status = status  # type: ignore
+        db_vault.status = status
 
         if error_message is not None:
-            db_vault.error_message = error_message  # type: ignore
+            db_vault.error_message = error_message
 
         if file_count is not None:
-            db_vault.file_count = file_count  # type: ignore
+            db_vault.file_count = file_count
 
         if processed_files is not None:
-            db_vault.processed_files = processed_files  # type: ignore
+            db_vault.processed_files = processed_files
 
         self.db.commit()
         self.db.refresh(db_vault)

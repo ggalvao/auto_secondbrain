@@ -1,3 +1,5 @@
+"""CLI configuration settings."""
+
 from pydantic_settings import BaseSettings
 
 
@@ -11,6 +13,8 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     class Config:
+        """Pydantic configuration."""
+
         env_file = ".env"
         case_sensitive = True
 

@@ -1,6 +1,8 @@
+"""Base classes and interfaces for Language Model (LLM) clients."""
+
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -14,7 +16,7 @@ class LLMResponse:
     metadata: Optional[Dict[str, Any]] = None
 
 
-class LLMClient(ABC):
+class BaseLLMClient(ABC):
     """Abstract base class for LLM clients."""
 
     @abstractmethod

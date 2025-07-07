@@ -1,3 +1,5 @@
+"""Vault API routes for upload and management."""
+
 import os
 import tempfile
 import zipfile
@@ -25,7 +27,6 @@ async def upload_vault(
     db: Session = Depends(get_db),
 ) -> VaultUpload:
     """Upload an Obsidian vault ZIP file."""
-
     # Validate file
     if not file.filename or not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="Only ZIP files are supported")
@@ -33,7 +34,10 @@ async def upload_vault(
     if file.size and file.size > settings.MAX_VAULT_SIZE:
         raise HTTPException(
             status_code=400,
-            detail=f"File size exceeds maximum limit of {settings.MAX_VAULT_SIZE} bytes",
+            detail=(
+                f"File size exceeds maximum limit of "
+                f"{settings.MAX_VAULT_SIZE} bytes"
+            ),
         )
 
     # Create vault service

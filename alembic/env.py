@@ -1,8 +1,11 @@
+"""Alembic environment configuration."""
+
 import os
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
-from alembic import context
 
+from sqlalchemy import engine_from_config, pool
+
+from alembic import context
 from libs.models.base import Base
 
 config = context.config
@@ -13,7 +16,8 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
-def get_url():
+def get_url() -> str:
+    """Get the database URL."""
     return os.getenv(
         "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/secondbrain"
     )

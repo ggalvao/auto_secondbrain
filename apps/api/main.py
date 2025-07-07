@@ -1,4 +1,7 @@
+"""Main application file for the SecondBrain API."""
+
 from contextlib import asynccontextmanager
+from typing import AsyncIterator
 
 import structlog
 from fastapi import FastAPI, Request
@@ -12,7 +15,7 @@ logger = structlog.get_logger()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Manage application lifecycle."""
     # Startup
     logger.info("Starting SecondBrain API", version="0.1.0")

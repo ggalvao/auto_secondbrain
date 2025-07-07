@@ -1,11 +1,13 @@
-import streamlit as st
-import requests
-import pandas as pd
+"""Streamlit application for SecondBrain."""
+
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any, Dict, List
+
+import pandas as pd
+import requests
+import streamlit as st
 
 from .config import settings
-
 
 st.set_page_config(
     page_title="SecondBrain",
@@ -16,8 +18,7 @@ st.set_page_config(
 
 
 def main() -> None:
-    """Main Streamlit application."""
-
+    """Run the main Streamlit application."""
     st.title("🧠 SecondBrain")
     st.markdown("AI-powered knowledge management system")
 
@@ -38,7 +39,7 @@ def main() -> None:
 
 
 def upload_vault_page() -> None:
-    """Vault upload page."""
+    """Display the vault upload page."""
     st.header("📁 Upload Obsidian Vault")
 
     with st.form("vault_upload"):
@@ -71,7 +72,8 @@ def upload_vault_page() -> None:
                         st.success("✅ Vault uploaded successfully!")
                         st.info(f"Vault ID: {response.get('vault_id')}")
                         st.info(
-                            "Processing has started. Check the Vault Management page for status."
+                            "Processing has started. Check the Vault "
+                            "Management page for status."
                         )
                     else:
                         st.error(
@@ -83,7 +85,7 @@ def upload_vault_page() -> None:
 
 
 def vault_management_page() -> None:
-    """Vault management page."""
+    """Display the vault management page."""
     st.header("📚 Vault Management")
 
     # Refresh button
@@ -171,7 +173,7 @@ def vault_management_page() -> None:
 
 
 def analytics_page() -> None:
-    """Analytics page."""
+    """Display the analytics page."""
     st.header("📊 Analytics")
 
     st.info("Analytics features coming soon!")
@@ -218,7 +220,7 @@ def analytics_page() -> None:
 
 
 def settings_page() -> None:
-    """Settings page."""
+    """Display the settings page."""
     st.header("⚙️ Settings")
 
     st.subheader("API Configuration")
@@ -233,7 +235,7 @@ def settings_page() -> None:
     # Connection test
     if st.button("Test Connection"):
         try:
-            response = requests.get(f"{api_url}/health")
+            response = requests.get(f"{api_url}/health", timeout=10)
             if response.status_code == 200:
                 st.success("✅ Connection successful!")
             else:
@@ -244,8 +246,9 @@ def settings_page() -> None:
     st.subheader("About")
     st.markdown(
         """
-    **SecondBrain** is an AI-powered knowledge management system that helps you organize, process, and analyze your Obsidian vaults.
-    
+    **SecondBrain** is an AI-powered knowledge management system that
+    helps you organize, process, and analyze your Obsidian vaults.
+
     - **Version**: 0.1.0
     - **API**: FastAPI backend with Celery workers
     - **UI**: Streamlit for rapid prototyping
@@ -260,7 +263,10 @@ def upload_vault(name: str, file: Any) -> Dict[str, Any]:
     data = {"name": name}
 
     response = requests.post(
-        f"{settings.API_BASE_URL}/api/v1/vaults/upload", files=files, data=data
+        f"{settings.API_BASE_URL}/api/v1/vaults/upload",
+        files=files,
+        data=data,
+        timeout=60,
     )
 
     if response.status_code == 200:
@@ -277,16 +283,18 @@ def upload_vault(name: str, file: Any) -> Dict[str, Any]:
         }
 
 
-def get_vaults() -> list[Dict[str, Any]]:
+def get_vaults() -> List[Dict[str, Any]]:
     """Get list of vaults from API."""
-    response = requests.get(f"{settings.API_BASE_URL}/api/v1/vaults/")
+    response = requests.get(f"{settings.API_BASE_URL}/api/v1/vaults/", timeout=10)
     response.raise_for_status()
     return response.json()
 
 
 def delete_vault(vault_id: str) -> None:
     """Delete vault via API."""
-    response = requests.delete(f"{settings.API_BASE_URL}/api/v1/vaults/{vault_id}")
+    response = requests.delete(
+        f"{settings.API_BASE_URL}/api/v1/vaults/{vault_id}", timeout=10
+    )
     response.raise_for_status()
 
 

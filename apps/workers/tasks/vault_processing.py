@@ -1,23 +1,24 @@
+"""Celery tasks for processing vaults."""
+
 import os
 import zipfile
-from typing import Dict, Any
+from typing import Any, Dict
 from uuid import UUID
 
 import structlog
 
 from libs.database.connection import get_db
-from libs.models.vault import VaultDB, VaultStatus
 from libs.models.processing import ProcessingJobDB, ProcessingStatus
-from ..main import celery_app
+from libs.models.vault import VaultDB, VaultStatus
 
+from ..main import celery_app
 
 logger = structlog.get_logger()
 
 
 @celery_app.task(bind=True, max_retries=3)
-def process_vault(self, vault_id: str) -> Dict[str, Any]:
-    """Main task to process a vault."""
-
+def process_vault(self: Any, vault_id: str) -> Dict[str, Any]:
+    """Process a vault from upload to analysis."""
     logger.info("Starting vault processing", vault_id=vault_id, task_id=self.request.id)
 
     try:
@@ -27,7 +28,7 @@ def process_vault(self, vault_id: str) -> Dict[str, Any]:
             if not vault:
                 raise ValueError(f"Vault {vault_id} not found")
 
-            vault.status = VaultStatus.PROCESSING  # type: ignore
+            vault.status = VaultStatus.PROCESSING
             db.commit()
 
             # Create processing job
@@ -64,15 +65,15 @@ def process_vault(self, vault_id: str) -> Dict[str, Any]:
         # Update vault with results
         with get_db() as db:
             vault = db.query(VaultDB).filter(VaultDB.id == UUID(vault_id)).first()
-            vault.status = VaultStatus.COMPLETED  # type: ignore
-            vault.file_count = file_info.get("file_count", 0)  # type: ignore
-            vault.processed_files = file_info.get("file_count", 0)  # type: ignore
+            vault.status = VaultStatus.COMPLETED
+            vault.file_count = file_info.get("file_count", 0)
+            vault.processed_files = file_info.get("file_count", 0)
 
             # Update processing job
             job = db.query(ProcessingJobDB).filter(ProcessingJobDB.id == job_id).first()
-            job.status = ProcessingStatus.COMPLETED  # type: ignore
-            job.progress = "100%"  # type: ignore
-            job.result_data = {  # type: ignore
+            job.status = ProcessingStatus.COMPLETED
+            job.progress = "100%"
+            job.result_data = {
                 "file_info": file_info,
                 "analysis": analysis,
             }
@@ -102,9 +103,8 @@ def process_vault(self, vault_id: str) -> Dict[str, Any]:
 
 
 @celery_app.task(bind=True)
-def extract_vault_files(self, vault_id: str) -> Dict[str, Any]:
-    """Extract files from vault ZIP."""
-
+def extract_vault_files(self: Any, vault_id: str) -> Dict[str, Any]:
+    """Extract files from the vault ZIP archive."""
     logger.info("Extracting vault files", vault_id=vault_id)
 
     try:
@@ -167,10 +167,9 @@ def extract_vault_files(self, vault_id: str) -> Dict[str, Any]:
 
 @celery_app.task(bind=True)
 def analyze_vault_content(
-    self, vault_id: str, file_info: Dict[str, Any]
+    self: Any, vault_id: str, file_info: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Analyze vault content for insights."""
-
     logger.info("Analyzing vault content", vault_id=vault_id)
 
     try:

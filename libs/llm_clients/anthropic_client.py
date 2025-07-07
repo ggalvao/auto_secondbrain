@@ -1,20 +1,22 @@
-# mypy: ignore-file
+"""Anthropic client implementation."""
 
-import os
-from typing import List, Dict, Any, Optional
 import json
-from tenacity import retry, stop_after_attempt, wait_exponential
+import os
+from typing import Any, Dict, List, Optional
+
 import anthropic
+from tenacity import retry, stop_after_attempt, wait_exponential
 
-from .base import LLMClient, LLMResponse
+from .base import BaseLLMClient, LLMResponse
 
 
-class AnthropicClient(LLMClient):
+class AnthropicClient(BaseLLMClient):
     """Anthropic Claude API client."""
 
     def __init__(
         self, api_key: Optional[str] = None, model: str = "claude-3-sonnet-20240229"
-    ):
+    ) -> None:
+        """Initialize the Anthropic client."""
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY", "")
         self.model: str = model
         self.client = anthropic.AsyncAnthropic(api_key=self.api_key)
@@ -34,7 +36,7 @@ class AnthropicClient(LLMClient):
         """Chat with Anthropic using messages."""
         response = await self.client.messages.create(
             model=kwargs.get("model", self.model),
-            messages=messages,  # type: ignore
+            messages=messages,
             temperature=kwargs.get("temperature", 0.7),
             max_tokens=kwargs.get("max_tokens", 1000),
         )
@@ -58,12 +60,12 @@ class AnthropicClient(LLMClient):
 
     async def extract_keywords(self, text: str, **kwargs: Any) -> List[str]:
         """Extract keywords from text."""
-        prompt: str = f"""Extract the most important keywords and phrases from the following text. 
-        Return them as a JSON list of strings.
-        
-        Text: {text}
-        
-        Keywords (JSON format):"""
+        prompt: str = (
+            "Extract the most important keywords and phrases from the following text.\n"
+            "Return them as a JSON list of strings.\n\n"
+            f"Text: {text}\n\n"
+            "Keywords (JSON format):"
+        )
 
         response = await self.generate_text(prompt, **kwargs)
 
@@ -79,11 +81,12 @@ class AnthropicClient(LLMClient):
     ) -> str:
         """Classify text into one of the given categories."""
         categories_str: str = ", ".join(categories)
-        prompt: str = f"""Classify the following text into one of these categories: {categories_str}
-        
-        Text: {text}
-        
-        Category:"""
+        prompt: str = (
+            f"Classify the following text into one of these categories: "
+            f"{categories_str}\n\n"
+            f"Text: {text}\n\n"
+            "Category:"
+        )
 
         response = await self.generate_text(prompt, **kwargs)
 

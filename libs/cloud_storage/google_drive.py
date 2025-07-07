@@ -1,6 +1,7 @@
-# mypy: ignore-errors
+"""Google Drive cloud storage provider implementation."""
+
 import io
-from typing import Dict, List, Optional, BinaryIO, Any
+from typing import Any, BinaryIO, Dict, List, Optional
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -8,7 +9,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 
-from .base import CloudStorageProvider, CloudFile
+from .base import CloudFile, CloudStorageProvider
 
 
 class GoogleDriveProvider(CloudStorageProvider):
@@ -17,8 +18,9 @@ class GoogleDriveProvider(CloudStorageProvider):
     SCOPES = ["https://www.googleapis.com/auth/drive"]
 
     def __init__(self) -> None:
+        """Initialize the GoogleDriveProvider."""
         self.service = None
-        self.credentials = None
+        self.credentials: Optional[Credentials] = None
 
     async def authenticate(self, credentials: Dict[str, str]) -> bool:
         """Authenticate with Google Drive."""
@@ -32,11 +34,15 @@ class GoogleDriveProvider(CloudStorageProvider):
                 self.credentials = flow.run_local_server(port=0)
 
             # Refresh token if needed
-            if self.credentials.expired and self.credentials.refresh_token:
+            if (
+                self.credentials
+                and self.credentials.expired
+                and self.credentials.refresh_token
+            ):
                 self.credentials.refresh(Request())
 
             # Build service
-            self.service = build("drive", "v3", credentials=self.credentials)  # type: ignore
+            self.service = build("drive", "v3", credentials=self.credentials)
             return True
         except Exception:
             return False
@@ -51,11 +57,14 @@ class GoogleDriveProvider(CloudStorageProvider):
             query += f" and '{folder_id}' in parents"
 
         results = (
-            self.service.files()  # type: ignore
+            self.service.files()
             .list(
                 q=query,
                 pageSize=1000,
-                fields="nextPageToken, files(id, name, size, mimeType, modifiedTime, parents)",
+                fields=(
+                    "nextPageToken, files(id, name, size, mimeType, "
+                    "modifiedTime, parents)"
+                ),
             )
             .execute()
         )
@@ -82,7 +91,7 @@ class GoogleDriveProvider(CloudStorageProvider):
         if not self.service:
             raise ValueError("Not authenticated")
 
-        request = self.service.files().get_media(fileId=file_id)  # type: ignore
+        request = self.service.files().get_media(fileId=file_id)
         file_io = io.BytesIO()
         downloader = MediaIoBaseDownload(file_io, request)
 
@@ -109,7 +118,7 @@ class GoogleDriveProvider(CloudStorageProvider):
         )
 
         file = (
-            self.service.files()  # type: ignore
+            self.service.files()
             .create(
                 body=file_metadata,
                 media_body=media,
@@ -133,7 +142,7 @@ class GoogleDriveProvider(CloudStorageProvider):
             raise ValueError("Not authenticated")
 
         try:
-            self.service.files().delete(fileId=file_id).execute()  # type: ignore
+            self.service.files().delete(fileId=file_id).execute()
             return True
         except Exception:
             return False
@@ -153,8 +162,6 @@ class GoogleDriveProvider(CloudStorageProvider):
         if parent_folder_id:
             file_metadata["parents"] = [parent_folder_id]
 
-        folder = (
-            self.service.files().create(body=file_metadata, fields="id").execute()  # type: ignore
-        )
+        folder = self.service.files().create(body=file_metadata, fields="id").execute()
 
         return folder["id"]

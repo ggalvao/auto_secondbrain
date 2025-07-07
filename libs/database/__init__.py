@@ -1,4 +1,6 @@
-from .connection import DatabaseManager, get_db, get_async_db
+"""Database related utilities and connections."""
+
+from .connection import DatabaseManager, get_async_db, get_db
 from .migrations import run_migrations
 
 __all__ = [

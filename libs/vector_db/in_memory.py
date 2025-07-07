@@ -1,14 +1,18 @@
-from typing import List, Optional, Dict, Any
+"""In-memory vector database implementation for development."""
+
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from .base import VectorDatabase, Document, SearchResult
+from .base import Document, SearchResult, VectorDatabase
 
 
 class InMemoryVectorDB(VectorDatabase):
     """In-memory vector database implementation for development."""
 
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+        """Initialize the in-memory vector database."""
         self.model = SentenceTransformer(model_name)
         self.documents: Dict[str, Document] = {}
         self.embeddings: Dict[str, np.ndarray] = {}

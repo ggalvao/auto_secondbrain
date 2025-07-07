@@ -1,13 +1,15 @@
+"""SecondBrain CLI - AI-powered knowledge management system."""
+
+from pathlib import Path
+from typing import Optional
+
+import requests
 import typer
 from rich.console import Console
-from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
-from typing import Optional
-import requests
-from pathlib import Path
+from rich.table import Table
 
 from .config import settings
-
 
 app = typer.Typer(
     name="secondbrain",
@@ -19,12 +21,12 @@ console = Console()
 
 
 @app.command()
-def status():
+def status() -> None:
     """Check API status and health."""
     console.print("🔍 Checking SecondBrain API status...", style="bold blue")
 
     try:
-        response = requests.get(f"{settings.API_BASE_URL}/health/detailed")
+        response = requests.get(f"{settings.API_BASE_URL}/health/detailed", timeout=10)
         response.raise_for_status()
 
         health_data = response.json()
@@ -54,9 +56,8 @@ def status():
 def upload(
     vault_path: Path = typer.Argument(..., help="Path to the vault ZIP file"),
     name: Optional[str] = typer.Option(None, "--name", "-n", help="Vault name"),
-):
+) -> None:
     """Upload a vault ZIP file."""
-
     if not vault_path.exists():
         console.print(f"❌ File not found: {vault_path}", style="bold red")
         raise typer.Exit(1)
@@ -85,6 +86,7 @@ def upload(
                     f"{settings.API_BASE_URL}/api/v1/vaults/upload",
                     files=files,
                     data=data,
+                    timeout=60,
                 )
 
                 progress.update(task, description="Processing response...")
@@ -108,12 +110,12 @@ def upload(
 
 
 @app.command()
-def list():
+def list() -> None:
     """List all vaults."""
     console.print("📚 Listing vaults...", style="bold blue")
 
     try:
-        response = requests.get(f"{settings.API_BASE_URL}/api/v1/vaults/")
+        response = requests.get(f"{settings.API_BASE_URL}/api/v1/vaults/", timeout=10)
         response.raise_for_status()
 
         vaults = response.json()
@@ -153,12 +155,14 @@ def list():
 
 
 @app.command()
-def info(vault_id: str):
+def info(vault_id: str) -> None:
     """Get detailed information about a vault."""
     console.print(f"🔍 Getting vault info: {vault_id}", style="bold blue")
 
     try:
-        response = requests.get(f"{settings.API_BASE_URL}/api/v1/vaults/{vault_id}")
+        response = requests.get(
+            f"{settings.API_BASE_URL}/api/v1/vaults/{vault_id}", timeout=10
+        )
         response.raise_for_status()
 
         vault = response.json()
@@ -187,7 +191,7 @@ def info(vault_id: str):
 
 
 @app.command()
-def delete(vault_id: str):
+def delete(vault_id: str) -> None:
     """Delete a vault."""
     console.print(f"🗑️  Deleting vault: {vault_id}", style="bold red")
 
@@ -196,7 +200,9 @@ def delete(vault_id: str):
         return
 
     try:
-        response = requests.delete(f"{settings.API_BASE_URL}/api/v1/vaults/{vault_id}")
+        response = requests.delete(
+            f"{settings.API_BASE_URL}/api/v1/vaults/{vault_id}", timeout=10
+        )
         response.raise_for_status()
 
         console.print("✅ Vault deleted successfully!", style="bold green")
@@ -211,7 +217,7 @@ def delete(vault_id: str):
 
 
 @app.command()
-def config():
+def config() -> None:
     """Show current configuration."""
     console.print("⚙️  SecondBrain Configuration", style="bold blue")
 
@@ -225,7 +231,7 @@ def config():
     console.print(table)
 
 
-def cli():
+def cli() -> None:
     """Entry point for the CLI."""
     app()
 

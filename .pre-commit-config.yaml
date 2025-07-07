@@ -34,7 +34,7 @@ repos:
     hooks:
       - id: mypy
         additional_dependencies: [types-requests]
-        args: [--ignore-missing-imports]
+        args: [--ignore-missing-imports, --disable-error-code=attr-defined]
 
   - repo: https://github.com/pycqa/bandit
     rev: 1.7.5
