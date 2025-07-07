@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: secondbrain-postgres
+    environment:
+      POSTGRES_DB: secondbrain
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: secondbrain-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    container_name: secondbrain-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/secondbrain
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
+    volumes:
+      - ./apps/api:/app/apps/api
+      - ./libs:/app/libs
+      - vault_storage:/app/storage/vaults
+    command: uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  workers:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.workers
+    container_name: secondbrain-workers
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/secondbrain
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development
+    volumes:
+      - ./apps/workers:/app/apps/workers
+      - ./libs:/app/libs
+      - vault_storage:/app/storage/vaults
+    command: celery -A apps.workers.main worker --loglevel=info --concurrency=2
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.streamlit
+    container_name: secondbrain-streamlit
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    environment:
+      - API_BASE_URL=http://api:8000
+    volumes:
+      - ./apps/streamlit_app:/app/apps/streamlit_app
+      - ./libs:/app/libs
+    command: streamlit run apps/streamlit_app/main.py --server.port=8501 --server.address=0.0.0.0
+
+volumes:
+  postgres_data:
+  redis_data:
+  vault_storage:

@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "secondbrain-api"
+version = "0.1.0"
+description = "FastAPI backend service for SecondBrain"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "python-multipart>=0.0.6",
+    "structlog>=23.0.0",
+    "python-dotenv>=1.0.0",
+    "httpx>=0.25.0",
+]

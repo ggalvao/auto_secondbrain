@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  dev:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.dev
+    container_name: secondbrain-dev
+    volumes:
+      - ..:/workspace:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: sleep infinity
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/secondbrain
+      - REDIS_URL=redis://redis:6379/0
+      - ENVIRONMENT=development

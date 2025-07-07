@@ -1,0 +1,36 @@
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    postgresql-client \
+    redis-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+RUN pip install uv
+
+# Install Docker CLI
+RUN curl -fsSL https://get.docker.com | sh
+
+# Create non-root user
+RUN groupadd --gid 1000 vscode \
+    && useradd --uid 1000 --gid vscode --shell /bin/bash --create-home vscode
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy project files
+COPY pyproject.toml uv.lock ./
+
+# Install Python dependencies
+RUN uv sync --dev
+
+# Switch to non-root user
+USER vscode
+
+# Set environment variables
+ENV PATH="/workspace/.venv/bin:$PATH"
+ENV PYTHONPATH="/workspace"

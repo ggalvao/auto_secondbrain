@@ -1,0 +1,12 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "secondbrain-vector-db"
+version = "0.1.0"
+description = "Vector database abstraction layer for SecondBrain"
+dependencies = [
+    "numpy>=1.24.0",
+    "sentence-transformers>=2.2.0",
+]
