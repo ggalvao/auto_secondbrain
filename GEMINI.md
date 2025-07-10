@@ -19,7 +19,7 @@ SecondBrain is an AI-powered knowledge management system designed to process, an
 uv sync --dev
 
 # Start infrastructure services
-docker-compose up -d postgres redis
+docker compose up -d postgres redis
 
 # Run database migrations
 uv run alembic upgrade head
@@ -31,7 +31,7 @@ uv run pre-commit install
 ### Running the Application
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # Or run services individually:
 uv run uvicorn apps.api.main:app --reload --port 8000          # API
@@ -495,13 +495,13 @@ async def process_multiple_files(file_paths: List[str]) -> List[ProcessingResult
 ### Database Connection Issues
 ```bash
 # Check database status
-docker-compose ps postgres
+docker compose ps postgres
 
 # View database logs
-docker-compose logs postgres
+docker compose logs postgres
 
 # Reset database
-docker-compose down postgres && docker-compose up -d postgres
+docker compose down postgres && docker compose up -d postgres
 uv run alembic upgrade head
 ```
 
@@ -514,15 +514,15 @@ uv run celery -A apps.workers.main inspect active
 uv run celery -A apps.workers.main monitor
 
 # Restart workers
-docker-compose restart workers
+docker compose restart workers
 ```
 
 ### Development Environment Reset
 ```bash
 # Complete environment reset
-docker-compose down -v
+docker compose down -v
 uv sync --dev
-docker-compose up -d
+docker compose up -d
 uv run alembic upgrade head
 ```
 

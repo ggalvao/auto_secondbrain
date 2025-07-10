@@ -14,10 +14,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Database Operations
 - `uv run alembic upgrade head` - Apply database migrations
 - `uv run alembic revision --autogenerate -m "description"` - Create new migration
-- `docker-compose up -d postgres redis` - Start required services
+- `docker compose up -d postgres redis` - Start required services
 
 ### Service Management
-- `docker-compose up -d` - Start all services in development mode
+- `docker compose up -d` - Start all services in development mode
 - `uv run uvicorn apps.api.main:app --reload --port 8000` - Start API server
 - `uv run celery -A apps.workers.main worker --loglevel=info` - Start Celery workers
 - `uv run streamlit run apps/streamlit_app/main.py --port 8501` - Start Streamlit UI
@@ -282,3 +282,14 @@ The project uses pre-commit hooks to ensure code quality:
 - **bandit** - Security scanning
 
 Run `uv run pre-commit install` to set up hooks locally.
+
+## Git Commit Guidelines
+
+When creating commits, follow these guidelines:
+
+- Write clear, descriptive commit messages that explain what was changed and why
+- Use conventional commit format when appropriate (e.g., "feat:", "fix:", "docs:")
+- Keep the first line under 72 characters
+- **NEVER include references to Claude Code or AI assistance in commit messages**
+- Do not use phrases like "made by Claude Code", "Co-Authored-By: Claude", or similar AI attributions
+- Focus on the technical changes and their purpose rather than who or what created them

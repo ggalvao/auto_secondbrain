@@ -89,7 +89,7 @@ For development without DevContainers:
 
 3. **Start development services:**
    ```bash
-   docker-compose up -d postgres redis
+   docker compose up -d postgres redis
    ```
 
 4. **Run database migrations:**
@@ -116,13 +116,13 @@ For development without DevContainers:
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop services
-docker-compose down
+docker compose down
 ```
 
 ### Accessing the Application

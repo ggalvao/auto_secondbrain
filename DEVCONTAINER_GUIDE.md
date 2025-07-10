@@ -395,8 +395,8 @@ print('Integration test completed successfully!')
 docker stats
 
 # View application logs
-docker-compose logs -f api
-docker-compose logs -f workers
+docker compose logs -f api
+docker compose logs -f workers
 
 # Monitor database connections
 uv run python -c "
@@ -498,16 +498,16 @@ with get_db_session() as db:
 
 ```bash
 # Check if services are running
-docker-compose ps
+docker compose ps
 
 # View service logs
-docker-compose logs postgres
-docker-compose logs redis
-docker-compose logs -f api      # Follow API logs
+docker compose logs postgres
+docker compose logs redis
+docker compose logs -f api      # Follow API logs
 
 # Restart specific service
-docker-compose restart postgres
-docker-compose restart redis
+docker compose restart postgres
+docker compose restart redis
 
 # Check service health from inside container
 curl http://postgres:5432 || echo "PostgreSQL not accessible"
@@ -697,14 +697,14 @@ with get_db_session() as db:
 #### 4. Reset Development Environment
 ```bash
 # Reset database
-docker-compose down postgres && docker-compose up -d postgres
+docker compose down postgres && docker compose up -d postgres
 uv run alembic upgrade head
 
 # Clear Celery tasks
 uv run celery -A apps.workers.main purge
 
 # Clear Redis cache
-docker-compose exec redis redis-cli FLUSHALL
+docker compose exec redis redis-cli FLUSHALL
 ```
 
 ## 🔄 Container Lifecycle
