@@ -13,6 +13,16 @@ class Settings(BaseSettings):
     PAGE_TITLE: str = "SecondBrain"
     PAGE_ICON: str = "🧠"
 
+    # Environment
+    ENVIRONMENT: str = "development"
+    DEBUG: bool = True
+
+    # Storage (not used by Streamlit but needed for .env compatibility)
+    MAX_VAULT_SIZE: int = 100 * 1024 * 1024  # 100MB
+
+    # Logging
+    SQL_DEBUG: bool = False
+
     class Config:
         """Pydantic configuration."""
 
