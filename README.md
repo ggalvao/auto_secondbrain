@@ -27,7 +27,53 @@ SecondBrain is built as a Python monorepo with the following components:
 - Docker and Docker Compose
 - [uv](https://github.com/astral-sh/uv) package manager
 
-### Development Setup
+### Option 1: Development with DevContainers (Recommended)
+
+For a consistent development environment with all dependencies pre-configured:
+
+**Prerequisites:**
+- Visual Studio Code with [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)
+- Docker Desktop or Docker Engine
+
+**Setup:**
+1. **Clone and open the repository:**
+   ```bash
+   git clone <repository-url>
+   cd auto_secondbrain
+   code .
+   ```
+
+2. **Open in DevContainer:**
+   - VS Code will show a notification about the DevContainer configuration
+   - Click "Reopen in Container"
+   - Or press `Ctrl+Shift+P` and run "Dev Containers: Reopen in Container"
+
+3. **Wait for container setup** (5-10 minutes first time)
+
+4. **Start the services:**
+   ```bash
+   # Terminal 1: Start API server
+   uv run uvicorn apps.api.main:app --reload --host 0.0.0.0 --port 8000
+
+   # Terminal 2: Start Celery workers
+   uv run celery -A apps.workers.main worker --loglevel=info
+
+   # Terminal 3: Start Streamlit UI (optional)
+   uv run streamlit run apps/streamlit_app/main.py --server.port=8501 --server.address=0.0.0.0
+   ```
+
+**DevContainer Benefits:**
+- Pre-configured PostgreSQL and Redis services
+- All VS Code extensions and settings installed
+- Consistent Python environment with uv
+- Pre-run database migrations
+- No local dependency conflicts
+
+> 📖 **For comprehensive DevContainer setup, testing, and troubleshooting instructions, see [DEVCONTAINER_GUIDE.md](DEVCONTAINER_GUIDE.md)**
+
+### Option 2: Local Development Setup
+
+For development without DevContainers:
 
 1. **Clone and setup environment:**
    ```bash
@@ -66,7 +112,7 @@ SecondBrain is built as a Python monorepo with the following components:
    uv run streamlit run apps/streamlit_app/main.py --server.port=8501
    ```
 
-### Using Docker (Recommended)
+### Option 3: Using Docker Compose (All Services)
 
 ```bash
 # Start all services
@@ -78,6 +124,13 @@ docker-compose logs -f
 # Stop services
 docker-compose down
 ```
+
+### Accessing the Application
+
+After starting the services, you can access:
+- **API Documentation**: http://localhost:8000/docs
+- **Streamlit UI**: http://localhost:8501
+- **Health Check**: http://localhost:8000/health
 
 ## 🔧 Development Commands
 
