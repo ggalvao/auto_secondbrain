@@ -105,12 +105,62 @@ SecondBrain uses a multi-service architecture:
 - Integrates seamlessly with FastAPI's async features
 - Provides excellent development experience with hot reload
 
-### Starting Services
+### Service Management
 
-The DevContainer automatically starts PostgreSQL and Redis. To start the application services:
+All services start automatically when the DevContainer launches:
+- **PostgreSQL** (database)
+- **Redis** (message broker)
+- **API Server** (FastAPI backend)
+- **Celery Workers** (background processing)
+- **Streamlit UI** (web interface)
+
+#### Viewing Service Logs
+
+Monitor running services from your **host machine** (outside the devcontainer):
 
 ```bash
-# Terminal 1: Start API server with Uvicorn
+# View all service logs
+docker compose logs -f
+
+# View specific service logs
+docker compose logs -f api        # API server
+docker compose logs -f workers    # Celery workers
+docker compose logs -f streamlit  # Streamlit UI
+docker compose logs -f postgres   # Database
+docker compose logs -f redis      # Message broker
+
+# View recent logs (last 100 lines)
+docker compose logs --tail=100 api
+```
+
+#### Manual Service Control (Advanced)
+
+If you need to restart individual services, use these commands from your **host machine**:
+
+```bash
+# Restart specific services
+docker compose restart api
+docker compose restart workers
+docker compose restart streamlit
+
+# Stop/start individual services
+docker compose stop streamlit
+docker compose start streamlit
+
+# View service status
+docker compose ps
+```
+
+#### Starting Services Manually (Development)
+
+For development with custom configurations, you can stop auto-started services and run them manually inside the devcontainer:
+
+```bash
+# From host: Stop auto-started services
+docker compose stop api workers streamlit
+
+# Inside devcontainer: Start with custom options
+# Terminal 1: API server with custom reload settings
 uv run uvicorn apps.api.main:app \
   --host 0.0.0.0 \
   --port 8000 \
@@ -118,13 +168,13 @@ uv run uvicorn apps.api.main:app \
   --reload-dir apps/api \
   --reload-dir libs
 
-# Terminal 2: Start Celery workers for background processing
+# Terminal 2: Celery workers with debug logging
 uv run celery -A apps.workers.main worker \
-  --loglevel=info \
-  --concurrency=2 \
+  --loglevel=debug \
+  --concurrency=1 \
   --pool=solo
 
-# Terminal 3: Start Streamlit UI
+# Terminal 3: Streamlit with custom settings
 uv run streamlit run apps/streamlit_app/main.py \
   --server.port=8501 \
   --server.address=0.0.0.0 \
@@ -452,11 +502,13 @@ All services are accessible from your host machine:
 
 ### Container Won't Start
 
-1. **Check Docker is running**:
+1. **Check Docker is running** (from host machine):
    ```bash
    docker --version
    docker ps
    ```
+
+   **Note**: `docker ps` won't work inside the devcontainer due to container isolation. Use it from your host machine.
 
 2. **Rebuild container**:
    - Press `Ctrl+Shift+P`
