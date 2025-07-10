@@ -7,7 +7,7 @@ import pandas as pd
 import requests
 import streamlit as st
 
-from .config import settings
+from apps.streamlit_app.config import settings
 
 st.set_page_config(
     page_title="SecondBrain",
