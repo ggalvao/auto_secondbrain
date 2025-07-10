@@ -82,9 +82,19 @@ class DatabaseManager:
             await session.close()
 
 
-@contextmanager
 def get_db() -> Generator[Session, None, None]:
     """Get database session for FastAPI dependency."""
+    db_manager = DatabaseManager()
+    session = db_manager.SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@contextmanager
+def get_db_session() -> Generator[Session, None, None]:
+    """Get database session with context manager for general use."""
     db_manager = DatabaseManager()
     with db_manager.get_session() as session:
         yield session
