@@ -32,7 +32,7 @@ SecondBrain is a **microservices-based AI knowledge management system** built as
 │                    SecondBrain Philosophy                  │
 ├─────────────────────────────────────────────────────────────┤
 │ • Async-First: Built for concurrent operations             │
-│ • Event-Driven: Background processing via message queues   │
+│ • Synchronous Processing: Direct vault processing in API   │
 │ • Type-Safe: Full TypeScript-style annotations in Python   │
 │ • API-Centric: REST APIs as the primary interface          │
 │ • Container-Native: Docker-first development and deployment │
@@ -43,18 +43,18 @@ SecondBrain is a **microservices-based AI knowledge management system** built as
 ### Service Interaction Map
 
 ```
-┌─────────────┐    HTTP    ┌─────────────┐    Celery    ┌─────────────┐
-│   Frontend  │ ---------> │  API Server │ -----------> │   Workers   │
-│ (Streamlit) │            │  (FastAPI)  │              │  (Celery)   │
-└─────────────┘            └─────────────┘              └─────────────┘
-       │                          │                             │
-       │                          │                             │
-       v                          v                             v
-┌─────────────┐            ┌─────────────┐              ┌─────────────┐
-│     CLI     │            │ PostgreSQL  │              │    Redis    │
-│   (Typer)   │            │ (Database)  │              │ (Message    │
-│             │            │             │              │  Broker)    │
-└─────────────┘            └─────────────┘              └─────────────┘
+┌─────────────┐    HTTP    ┌─────────────┐
+│   Frontend  │ ---------> │  API Server │
+│ (Streamlit) │            │  (FastAPI)  │
+└─────────────┘            └─────────────┘
+       │                          │
+       │                          │
+       v                          v
+┌─────────────┐            ┌─────────────┐
+│     CLI     │            │ PostgreSQL  │
+│   (Typer)   │            │ (Database)  │
+│             │            │             │
+└─────────────┘            └─────────────┘
 ```
 
 ### Core Technologies Stack
@@ -62,7 +62,7 @@ SecondBrain is a **microservices-based AI knowledge management system** built as
 | Layer | Technology | Purpose |
 |-------|------------|---------|
 | **Web Framework** | FastAPI + Uvicorn | High-performance async API server |
-| **Task Queue** | Celery + Redis | Background processing and job management |
+| **Processing** | Synchronous | Direct vault processing within API requests |
 | **Database** | PostgreSQL + SQLAlchemy 2.0 | Persistent data storage with modern ORM |
 | **Frontend** | Streamlit | Rapid UI prototyping and admin interface |
 | **CLI** | Typer + Rich | Command-line administration tools |
@@ -91,7 +91,6 @@ auto_secondbrain/
 │   ├── 🖥️  cli/                # Command-line interface
 │   ├── 🎨 frontend/            # Future React app (placeholder)
 │   ├── 📊 streamlit_app/       # Streamlit web UI
-│   └── 🔄 workers/             # Celery background workers
 ├── 📚 libs/                    # Shared libraries
 │   ├── ☁️  cloud_storage/      # Cloud provider integrations
 │   ├── 🗄️  database/           # DB connections and migrations
@@ -121,7 +120,7 @@ auto_secondbrain/
 │  External   │                    │  External   │
 │ Packages    │                    │ Packages    │
 │ (FastAPI,   │                    │ (SQLAlchemy,│
-│ Celery, etc)│                    │ Pydantic)   │
+│ etc)        │                    │ Pydantic)   │
 └─────────────┘                    └─────────────┘
 ```
 
@@ -210,109 +209,6 @@ class VaultService:
 3. **Async/Await**: All endpoints are async for better concurrency
 4. **Pydantic Validation**: Request/response models ensure type safety
 5. **Error Handling**: Structured HTTP exceptions with proper status codes
-
-### 🔄 Workers Service (`apps/workers/`)
-
-Celery-based background task processing system.
-
-#### Structure Deep Dive
-
-```
-apps/workers/
-├── 📄 main.py              # Celery app configuration
-├── ⚙️  config.py           # Worker-specific settings
-└── 📋 tasks/               # Task definitions
-    └── 📦 vault_processing.py # Vault processing tasks
-```
-
-#### Celery Configuration Deep Dive
-
-**`main.py` - Celery Setup**
-```python
-from celery import Celery
-
-# Create Celery app with Redis as broker
-celery_app = Celery(
-    "secondbrain-workers",
-    broker=settings.REDIS_URL,      # Message broker
-    backend=settings.REDIS_URL,     # Result backend
-    include=[                       # Task modules to discover
-        "apps.workers.tasks.vault_processing",
-    ],
-)
-
-# Configure Celery behavior
-celery_app.conf.update(
-    task_serializer="json",         # How tasks are serialized
-    accept_content=["json"],        # What content types to accept
-    result_serializer="json",       # How results are serialized
-    timezone="UTC",                 # Timezone for scheduled tasks
-    enable_utc=True,                # Use UTC timestamps
-    task_track_started=True,        # Track when tasks start
-    task_acks_late=True,            # Acknowledge tasks after completion
-    worker_prefetch_multiplier=1,   # How many tasks to prefetch
-    result_expires=3600,            # How long to keep results (seconds)
-)
-
-# Task routing configuration
-celery_app.conf.task_routes = {
-    "apps.workers.tasks.vault_processing.process_vault": {"queue": "vault_processing"},
-}
-```
-
-#### Task Pattern Deep Dive
-
-**`tasks/vault_processing.py` - Task Implementation**
-```python
-@celery_app.task(
-    bind=True,                      # Pass task instance as first argument
-    autoretry_for=(Exception,),     # Auto-retry on these exceptions
-    retry_kwargs={'max_retries': 3, 'countdown': 60},  # Retry configuration
-    soft_time_limit=300,            # Soft timeout (sends SIGTERM)
-    time_limit=600                  # Hard timeout (sends SIGKILL)
-)
-def process_vault(self: Task, vault_id: str) -> Dict[str, Any]:
-    """
-    Process uploaded vault content with AI analysis.
-
-    This task demonstrates several key patterns:
-    1. Error handling with structured logging
-    2. Database operations within tasks
-    3. Progress tracking and status updates
-    4. Integration with external AI services
-    """
-    try:
-        logger.info("Starting vault processing", vault_id=vault_id)
-
-        # Update vault status to processing
-        update_vault_status(vault_id, VaultStatus.PROCESSING)
-
-        # Extract files from uploaded ZIP
-        extracted_files = extract_vault_files(vault_id)
-
-        # Process each file with AI
-        for file_path in extracted_files:
-            analyze_file_content(file_path)
-            # Update progress here
-
-        # Mark as completed
-        update_vault_status(vault_id, VaultStatus.COMPLETED)
-
-        return {"status": "completed", "files_processed": len(extracted_files)}
-
-    except Exception as e:
-        logger.error("Vault processing failed", vault_id=vault_id, error=str(e))
-        update_vault_status(vault_id, VaultStatus.FAILED, error_message=str(e))
-        raise  # Re-raise for Celery retry mechanism
-```
-
-#### Worker Patterns Explained
-
-1. **Task Binding**: `bind=True` passes task instance for self-inspection
-2. **Automatic Retries**: Failed tasks are automatically retried with exponential backoff
-3. **Time Limits**: Soft and hard limits prevent runaway tasks
-4. **Status Tracking**: Tasks update database with progress information
-5. **Error Isolation**: Each task handles its own errors and cleanup
 
 ### 📊 Streamlit App (`apps/streamlit_app/`)
 
@@ -742,15 +638,15 @@ Understanding how data flows through the system is crucial for extending functio
                                        │                               │
                                        │ 3. Store                      │ ✓/✗
                                        v                               │
-┌─────────────┐    8. Status     ┌─────────────┐    4. Create DB    │
+┌─────────────┐    6. Status     ┌─────────────┐    4. Create DB    │
 │  Database   │ <──────────────  │  Storage    │ <──────────────────┘
 └─────────────┘                 └─────────────┘
        │                               │
-       │ 9. Update                     │ 5. Trigger
+       │ 7. Update                     │ 5. Process
        v                               v
-┌─────────────┐    7. Complete   ┌─────────────┐    6. Process     ┌─────────────┐
-│   Status    │ <──────────────  │ Celery Task │ ──────────────> │ AI Analysis │
-│   Updates   │                 └─────────────┘                 └─────────────┘
+┌─────────────┐               ┌─────────────┐
+│   Status    │ <─────────────── │ AI Analysis │
+│   Updates   │               └─────────────┘
 └─────────────┘
 ```
 
@@ -790,43 +686,41 @@ async def upload_vault(
         storage_path=upload_path
     ))
 
-    # Step 5: Trigger background processing
-    from apps.workers.tasks.vault_processing import process_vault
-    process_vault.delay(vault.id)
+    # Step 5: Process vault synchronously
+    vault_service.process_vault_content(vault.id)
 
     return vault
 ```
 
-#### 2. Background Processing Deep Dive
+#### 2. Synchronous Processing Deep Dive
 
-**Task**: `process_vault(vault_id: str)`
+**Service Method**: `process_vault_content(vault_id: str)`
 
 ```python
-@celery_app.task(bind=True, autoretry_for=(Exception,), retry_kwargs={'max_retries': 3})
-def process_vault(self: Task, vault_id: str) -> Dict[str, Any]:
-    """Complete vault processing pipeline."""
+def process_vault_content(self, vault_id: str) -> Dict[str, Any]:
+    """Complete vault processing pipeline - synchronous execution."""
 
     # Phase 1: Setup and validation
-    logger.info("Starting vault processing", vault_id=vault_id, task_id=self.request.id)
+    logger.info("Starting vault processing", vault_id=vault_id)
 
     try:
         # Update status to processing
-        update_vault_status(vault_id, VaultStatus.PROCESSING)
+        self.update_vault_status(vault_id, VaultStatus.PROCESSING)
 
         # Phase 2: File extraction
-        extracted_files = extract_vault_files.delay(vault_id).get()
+        extracted_files = self.extract_vault_files(vault_id)
 
         # Phase 3: Content analysis
         analysis_results = []
         for file_path in extracted_files:
-            result = analyze_file_content.delay(file_path).get()
+            result = self.analyze_file_content(file_path)
             analysis_results.append(result)
 
         # Phase 4: AI processing
-        ai_analysis = analyze_vault_content.delay(vault_id, analysis_results).get()
+        ai_analysis = self.analyze_vault_content(vault_id, analysis_results)
 
         # Phase 5: Finalization
-        update_vault_status(vault_id, VaultStatus.COMPLETED,
+        self.update_vault_status(vault_id, VaultStatus.COMPLETED,
                           processed_files=len(extracted_files))
 
         return {
@@ -838,7 +732,7 @@ def process_vault(self: Task, vault_id: str) -> Dict[str, Any]:
 
     except Exception as e:
         logger.error("Vault processing failed", vault_id=vault_id, error=str(e))
-        update_vault_status(vault_id, VaultStatus.FAILED, error_message=str(e))
+        self.update_vault_status(vault_id, VaultStatus.FAILED, error_message=str(e))
         raise
 ```
 
@@ -846,6 +740,7 @@ def process_vault(self: Task, vault_id: str) -> Dict[str, Any]:
 
 ```python
 def update_vault_status(
+    self,
     vault_id: str,
     status: VaultStatus,
     error_message: Optional[str] = None,
@@ -853,7 +748,7 @@ def update_vault_status(
 ) -> None:
     """Centralized status update system."""
 
-    with get_db_session() as db:
+    with self.db:
         vault = db.query(VaultDB).filter(VaultDB.id == vault_id).first()
         if not vault:
             logger.error("Vault not found for status update", vault_id=vault_id)
@@ -883,55 +778,28 @@ def update_vault_status(
 
 ### Error Handling and Recovery
 
-#### Retry Logic in Tasks
+#### Synchronous Error Handling
 
 ```python
-# Task-level retry configuration
-@celery_app.task(
-    bind=True,
-    autoretry_for=(ConnectionError, TimeoutError),  # Specific exceptions
-    retry_kwargs={
-        'max_retries': 3,
-        'countdown': 60,      # Wait 60 seconds between retries
-        'backoff': True,      # Exponential backoff
-        'jitter': True        # Add random jitter
-    }
-)
-def resilient_task(self: Task, data: Any) -> Any:
-    """Task with comprehensive retry logic."""
-    try:
-        return process_data(data)
-    except (ConnectionError, TimeoutError) as e:
-        logger.warning(f"Retryable error in task {self.request.id}: {e}")
-        raise  # Let Celery handle the retry
-    except Exception as e:
-        logger.error(f"Non-retryable error in task {self.request.id}: {e}")
-        # Don't retry for these errors
-        raise self.retry(countdown=0, max_retries=0)
+def resilient_processing(self, data: Any, max_retries: int = 3) -> Any:
+    """Processing with retry logic."""
+    for attempt in range(max_retries + 1):
+        try:
+            return self.process_data(data)
+        except (ConnectionError, TimeoutError) as e:
+            if attempt < max_retries:
+                wait_time = (2 ** attempt) + random.uniform(0, 1)  # Exponential backoff with jitter
+                logger.warning(f"Retryable error (attempt {attempt + 1}/{max_retries + 1}): {e}")
+                time.sleep(wait_time)
+                continue
+            else:
+                logger.error(f"Max retries exceeded: {e}")
+                raise
+        except Exception as e:
+            logger.error(f"Non-retryable error: {e}")
+            raise
 ```
 
-#### Dead Letter Queue Pattern
-
-```python
-# Configure dead letter queue for failed tasks
-celery_app.conf.task_routes = {
-    "apps.workers.tasks.*": {
-        "queue": "default",
-        "routing_key": "default",
-        "options": {
-            "priority": 0,
-            "retry_policy": {
-                "max_retries": 3,
-                "interval_start": 0,
-                "interval_step": 0.2,
-                "interval_max": 0.2,
-            },
-        },
-    },
-    # Failed tasks go to DLQ
-    "*.failed": {"queue": "failed_tasks"},
-}
-```
 
 ---
 
@@ -1185,11 +1053,6 @@ class BaseConfig(BaseSettings):
         description="PostgreSQL connection string"
     )
 
-    # Redis
-    REDIS_URL: str = Field(
-        default="redis://localhost:6379/0",
-        description="Redis connection string"
-    )
 
     # API
     API_BASE_URL: str = Field(
@@ -1277,8 +1140,6 @@ DEBUG=true
 # Database (local PostgreSQL)
 DATABASE_URL=postgresql://postgres:postgres@postgres:5432/secondbrain
 
-# Redis (local Redis)
-REDIS_URL=redis://redis:6379/0
 
 # API
 API_BASE_URL=http://localhost:8000
@@ -1306,8 +1167,6 @@ DEBUG=false
 # Database (production PostgreSQL)
 DATABASE_URL=postgresql://user:password@prod-db:5432/secondbrain
 
-# Redis (production Redis cluster)
-REDIS_URL=redis://prod-redis:6379/0
 
 # API
 API_BASE_URL=https://api.secondbrain.ai
@@ -1335,7 +1194,7 @@ LOG_FORMAT=json
 The system uses multiple communication patterns based on the use case:
 
 1. **Synchronous HTTP**: API requests between services
-2. **Asynchronous Messages**: Background task processing
+2. **Direct Processing**: Synchronous vault processing within API
 3. **Database Sharing**: Shared data store for state
 4. **Event Streaming**: Real-time updates (future)
 
@@ -1427,63 +1286,6 @@ async def communicate_with_api():
     )
 ```
 
-### Message Queue Communication
-
-**Celery Task Communication Pattern**
-```python
-"""Advanced Celery task patterns for service communication."""
-
-from celery import group, chain, chord
-from apps.workers.main import celery_app
-
-# Sequential processing with chain
-@celery_app.task
-def extract_files(vault_id: str) -> List[str]:
-    """Extract files from vault."""
-    # Implementation here
-    return ["file1.md", "file2.md", "file3.md"]
-
-@celery_app.task
-def analyze_file(file_path: str) -> Dict[str, Any]:
-    """Analyze individual file."""
-    # Implementation here
-    return {"file": file_path, "analysis": "..."}
-
-@celery_app.task
-def combine_analysis(results: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Combine individual file analyses."""
-    # Implementation here
-    return {"combined_analysis": "..."}
-
-# Complex workflow with chord (parallel + callback)
-def process_vault_workflow(vault_id: str):
-    """Complex processing workflow."""
-
-    # Step 1: Extract files (sequential)
-    extract_task = extract_files.s(vault_id)
-
-    # Step 2: Analyze files in parallel
-    def create_analysis_tasks(file_list):
-        return group(analyze_file.s(file_path) for file_path in file_list)
-
-    # Step 3: Combine results (after all analysis complete)
-    combine_task = combine_analysis.s()
-
-    # Create workflow: extract -> analyze (parallel) -> combine
-    workflow = chain(
-        extract_task,
-        lambda result: chord(
-            create_analysis_tasks(result),
-            combine_task
-        )
-    )
-
-    return workflow.apply_async()
-
-# Usage
-result = process_vault_workflow("vault-123")
-final_result = result.get()  # Wait for completion
-```
 
 ### Event-Driven Communication (Future)
 
@@ -1747,28 +1549,27 @@ async def logging_middleware(request: Request, call_next):
             )
             raise
 
-# Celery task logging
-@celery_app.task(bind=True)
-def logged_task(self: Task, data: Any) -> Any:
-    """Task with comprehensive logging."""
+# Service method logging
+def logged_processing(self, data: Any) -> Any:
+    """Processing with comprehensive logging."""
 
-    task_id = self.request.id
+    processing_id = str(uuid.uuid4())
 
-    with structlog.contextvars.bound_contextvars(task_id=task_id):
+    with structlog.contextvars.bound_contextvars(processing_id=processing_id):
         logger.info(
-            "Task started",
-            task_name=self.name,
-            task_id=task_id,
+            "Processing started",
+            method_name=self.__class__.__name__,
+            processing_id=processing_id,
             data_size=len(str(data))
         )
 
         try:
-            result = process_data(data)
+            result = self.process_data(data)
 
             logger.info(
-                "Task completed successfully",
-                task_name=self.name,
-                task_id=task_id,
+                "Processing completed successfully",
+                method_name=self.__class__.__name__,
+                processing_id=processing_id,
                 result_size=len(str(result))
             )
 
@@ -1776,9 +1577,9 @@ def logged_task(self: Task, data: Any) -> Any:
 
         except Exception as e:
             logger.error(
-                "Task failed",
-                task_name=self.name,
-                task_id=task_id,
+                "Processing failed",
+                method_name=self.__class__.__name__,
+                processing_id=processing_id,
                 error=str(e),
                 error_type=type(e).__name__
             )
@@ -2089,16 +1890,6 @@ def sample_vault_file() -> Iterator[str]:
     # Cleanup
     shutil.rmtree(temp_dir)
 
-# Celery testing fixtures
-@pytest.fixture
-def celery_config():
-    """Celery configuration for testing."""
-    return {
-        'broker_url': 'memory://',
-        'result_backend': 'cache+memory://',
-        'task_always_eager': True,  # Execute tasks synchronously
-        'task_eager_propagates': True,  # Propagate exceptions
-    }
 
 @pytest.fixture
 def mock_llm_client():
@@ -3252,7 +3043,6 @@ class ExtensibleConfig(BaseSettings):
 
     # Core settings
     DATABASE_URL: str = "postgresql://localhost/secondbrain"
-    REDIS_URL: str = "redis://localhost:6379/0"
 
     # Extension points
     VAULT_PROCESSORS: List[str] = Field(

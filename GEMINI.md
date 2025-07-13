@@ -82,12 +82,12 @@ Each application module follows a service layer architecture:
 - **Models** define data structures and database schemas
 - **Dependencies** manage database sessions and external services
 
-#### Event-Driven Processing
-Vault processing uses an event-driven architecture:
+#### Synchronous Processing
+Vault processing uses a synchronous architecture:
 1. File upload triggers immediate validation
-2. Background tasks handle resource-intensive operations
-3. Status updates propagate through the system
-4. Each processing stage is independently retryable
+2. Processing happens directly within API requests
+3. Status updates are handled synchronously
+4. Error handling includes retry logic for resilience
 
 #### Configuration Management
 - Environment-specific settings in `config.py` files
@@ -458,7 +458,7 @@ async def process_multiple_files(file_paths: List[str]) -> List[ProcessingResult
 2. **Create database models** - Add/modify SQLAlchemy models if needed
 3. **Implement service layer** - Add business logic in service classes
 4. **Create API endpoints** - Add FastAPI routes with proper validation
-5. **Add background tasks** - Create Celery tasks for async processing
+5. **Implement processing logic** - Add synchronous processing within services
 6. **Write tests** - Add unit and integration tests
 7. **Update documentation** - Update API docs and README
 
@@ -477,7 +477,7 @@ async def process_multiple_files(file_paths: List[str]) -> List[ProcessingResult
 - Database migrations run automatically
 - Health checks for all services
 - Structured logging for monitoring
-- Graceful shutdown handling for background tasks
+- Graceful shutdown handling for API services
 
 ## Troubleshooting Common Issues
 
@@ -494,16 +494,16 @@ docker compose down postgres && docker compose up -d postgres
 uv run alembic upgrade head
 ```
 
-### Celery Worker Problems
+### API Service Problems
 ```bash
-# Check worker status
-uv run celery -A apps.workers.main inspect active
+# Check API status
+curl http://localhost:8000/health
 
-# Monitor task queue
-uv run celery -A apps.workers.main monitor
+# View API logs
+docker compose logs api
 
-# Restart workers
-docker compose restart workers
+# Restart API service
+docker compose restart api
 ```
 
 ### Development Environment Reset

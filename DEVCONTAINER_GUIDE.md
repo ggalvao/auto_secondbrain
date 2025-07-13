@@ -35,7 +35,7 @@ Click **"Reopen in Container"**
 The first time will take 5-10 minutes as it:
 - Builds the development container
 - Installs Python dependencies with `uv`
-- Sets up PostgreSQL and Redis services
+- Sets up PostgreSQL service
 - Installs VS Code extensions
 - Configures the development environment
 
@@ -54,7 +54,7 @@ Main configuration file that defines:
 Development-specific Docker Compose override that:
 - Creates the development container
 - Mounts your workspace with file watching
-- Connects to PostgreSQL and Redis services
+- Connects to PostgreSQL service
 - Enables Docker-in-Docker for container operations
 
 ### `infra/docker/Dockerfile.dev`
@@ -74,19 +74,16 @@ When the DevContainer starts, you get access to:
 | **API Server** | 8000 | FastAPI backend (auto-starts) |
 | **Streamlit UI** | 8501 | Web interface (manual start) |
 | **PostgreSQL** | 5432 | Database server |
-| **Redis** | 6379 | Cache and message broker |
 
 ## 🛠️ Development Workflow
 
 ### Understanding the Application Stack
 
-SecondBrain uses a multi-service architecture:
+SecondBrain uses a streamlined service architecture:
 
-- **Uvicorn + FastAPI**: High-performance ASGI web server running the API
-- **Celery Workers**: Background task processing for vault analysis
+- **Uvicorn + FastAPI**: High-performance ASGI web server running the API with synchronous vault processing
 - **Streamlit**: Interactive web UI for vault management
 - **PostgreSQL**: Primary database for application data
-- **Redis**: Message broker for Celery and caching
 
 #### What is Uvicorn?
 
@@ -107,11 +104,9 @@ SecondBrain uses a multi-service architecture:
 
 ### Service Management
 
-All services start automatically when the DevContainer launches:
+Services start automatically when the DevContainer launches:
 - **PostgreSQL** (database)
-- **Redis** (message broker)
-- **API Server** (FastAPI backend)
-- **Celery Workers** (background processing)
+- **API Server** (FastAPI backend with synchronous processing)
 - **Streamlit UI** (web interface)
 
 #### Viewing Service Logs
@@ -124,10 +119,8 @@ docker compose logs -f
 
 # View specific service logs
 docker compose logs -f api        # API server
-docker compose logs -f workers    # Celery workers
 docker compose logs -f streamlit  # Streamlit UI
 docker compose logs -f postgres   # Database
-docker compose logs -f redis      # Message broker
 
 # View recent logs (last 100 lines)
 docker compose logs --tail=100 api
@@ -140,7 +133,6 @@ If you need to restart individual services, use these commands from your **host 
 ```bash
 # Restart specific services
 docker compose restart api
-docker compose restart workers
 docker compose restart streamlit
 
 # Stop/start individual services
@@ -157,7 +149,7 @@ For development with custom configurations, you can stop auto-started services a
 
 ```bash
 # From host: Stop auto-started services
-docker compose stop api workers streamlit
+docker compose stop api streamlit
 
 # Inside devcontainer: Start with custom options
 # Terminal 1: API server with custom reload settings
@@ -168,20 +160,11 @@ uv run uvicorn apps.api.main:app \
   --reload-dir apps/api \
   --reload-dir libs
 
-# Terminal 2: Celery workers with debug logging
-uv run celery -A apps.workers.main worker \
-  --loglevel=debug \
-  --concurrency=1 \
-  --pool=solo
-
-# Terminal 3: Streamlit with custom settings
+# Terminal 2: Streamlit with custom settings
 uv run streamlit run apps/streamlit_app/main.py \
   --server.port=8501 \
   --server.address=0.0.0.0 \
   --server.runOnSave=true
-
-# Terminal 4: Monitor Celery tasks (optional)
-uv run celery -A apps.workers.main flower --port=5555
 ```
 
 ### Service Startup Options
@@ -201,17 +184,6 @@ uv run uvicorn apps.api.main:app --reload --log-level debug
 uv run uvicorn apps.api.main:app --reload --reload-dir apps --reload-dir libs
 ```
 
-#### Celery Worker Options
-```bash
-# Single worker (debugging)
-uv run celery -A apps.workers.main worker --loglevel=debug --concurrency=1
-
-# Multiple workers (performance)
-uv run celery -A apps.workers.main worker --loglevel=info --concurrency=4
-
-# Specific queue processing
-uv run celery -A apps.workers.main worker -Q vault_processing --loglevel=info
-```
 
 ### Database Setup
 
@@ -446,7 +418,6 @@ docker stats
 
 # View application logs
 docker compose logs -f api
-docker compose logs -f workers
 
 # Monitor database connections
 uv run python -c "
@@ -496,7 +467,6 @@ All services are accessible from your host machine:
 - **API Documentation**: http://localhost:8000/docs
 - **Streamlit UI**: http://localhost:8501
 - **PostgreSQL**: `localhost:5432` (username: `postgres`, password: `postgres`)
-- **Redis**: `localhost:6379`
 
 ## 🐛 Troubleshooting
 
@@ -529,13 +499,6 @@ print('Database connection successful!')
 conn.close()
 "
 
-# Test Redis connection
-uv run python -c "
-import redis
-r = redis.Redis(host='redis', port=6379, db=0)
-r.ping()
-print('Redis connection successful!')
-"
 
 # Check database tables
 uv run python -c "
@@ -554,16 +517,13 @@ docker compose ps
 
 # View service logs
 docker compose logs postgres
-docker compose logs redis
 docker compose logs -f api      # Follow API logs
 
 # Restart specific service
 docker compose restart postgres
-docker compose restart redis
 
 # Check service health from inside container
-curl http://postgres:5432 || echo "PostgreSQL not accessible"
-redis-cli -h redis ping || echo "Redis not accessible"
+nc -z postgres 5432 && echo "PostgreSQL accessible" || echo "PostgreSQL not accessible"
 ```
 
 ### API Server Issues
@@ -647,7 +607,7 @@ except ImportError as e:
 
 ### Port Conflicts
 
-If ports 5432, 6379, 8000, or 8501 are already in use on your host:
+If ports 5432, 8000, or 8501 are already in use on your host:
 
 1. Stop conflicting services on your host
 2. Or modify the port mappings in `.devcontainer/docker-compose.dev.yml`
@@ -669,7 +629,6 @@ code .                                    # Open in VS Code
 
 # Service startup (run in separate terminals)
 uv run uvicorn apps.api.main:app --reload --host 0.0.0.0 --port 8000
-uv run celery -A apps.workers.main worker --loglevel=info
 uv run streamlit run apps/streamlit_app/main.py --server.port=8501 --server.address=0.0.0.0
 
 # Database operations
@@ -703,7 +662,6 @@ uv run secondbrain list                   # List vaults
 | **API ReDoc** | http://localhost:8000/redoc | Alternative API documentation |
 | **Health Check** | http://localhost:8000/health | Service health status |
 | **Streamlit UI** | http://localhost:8501 | Web interface |
-| **Flower (Celery)** | http://localhost:5555 | Task monitoring (if started) |
 
 ### Common Development Tasks
 
@@ -721,14 +679,13 @@ curl -X POST "http://localhost:8000/api/v1/vaults/upload" \
 uv run secondbrain upload /tmp/test_vault.zip --name "Test Vault"
 ```
 
-#### 2. Monitor Background Processing
+#### 2. Monitor API Processing
 ```bash
-# Start Celery monitoring
-uv run celery -A apps.workers.main flower --port=5555
+# Monitor API logs for vault processing
+docker compose logs -f api
 
-# Check task status
-uv run celery -A apps.workers.main inspect active
-uv run celery -A apps.workers.main inspect stats
+# Check vault processing status via API
+curl http://localhost:8000/api/v1/vaults/
 ```
 
 #### 3. Database Inspection
@@ -751,12 +708,6 @@ with get_db_session() as db:
 # Reset database
 docker compose down postgres && docker compose up -d postgres
 uv run alembic upgrade head
-
-# Clear Celery tasks
-uv run celery -A apps.workers.main purge
-
-# Clear Redis cache
-docker compose exec redis redis-cli FLUSHALL
 ```
 
 ## 🔄 Container Lifecycle
@@ -790,7 +741,7 @@ When you modify dependency files (`pyproject.toml`, `uv.lock`), rebuild:
 ### 2. Debugging
 - Python debugger is pre-configured
 - Set breakpoints and use F5 to start debugging
-- Works with FastAPI, Celery workers, and Streamlit
+- Works with FastAPI and Streamlit
 
 ### 3. Git Operations
 - Git is available inside the container
