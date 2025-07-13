@@ -2,15 +2,12 @@
 
 from typing import Any
 
-import redis  # type: ignore
 import structlog
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from libs.database import get_db
-
-from ..config import settings
 
 router = APIRouter()
 logger = structlog.get_logger()
@@ -28,7 +25,6 @@ async def detailed_health_check(db: Session = Depends(get_db)) -> dict[str, Any]
     checks = {
         "api": "healthy",
         "database": "unknown",
-        "redis": "unknown",
     }
 
     # Check database
@@ -38,15 +34,6 @@ async def detailed_health_check(db: Session = Depends(get_db)) -> dict[str, Any]
     except Exception as e:
         logger.error("Database health check failed", error=str(e))
         checks["database"] = "unhealthy"
-
-    # Check Redis
-    try:
-        r = redis.from_url(settings.REDIS_URL)
-        r.ping()
-        checks["redis"] = "healthy"
-    except Exception as e:
-        logger.error("Redis health check failed", error=str(e))
-        checks["redis"] = "unhealthy"
 
     overall_status = (
         "healthy"

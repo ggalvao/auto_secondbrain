@@ -9,9 +9,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command: sleep infinity
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/secondbrain
-      - REDIS_URL=redis://redis:6379/0
       - ENVIRONMENT=development
+      - VAULT_STORAGE_PATH=/workspace/storage/vaults
