@@ -8,7 +8,6 @@ SecondBrain is built as a Python monorepo with the following components:
 
 ### Applications
 - **`apps/api/`** - FastAPI backend service providing REST APIs for vault management
-- **`apps/workers/`** - Celery worker services for background processing and AI analysis
 - **`apps/streamlit_app/`** - Streamlit UI for rapid prototyping and vault management
 - **`apps/frontend/`** - Future TypeScript/React application (placeholder)
 - **`apps/cli/`** - Command-line tools for administration and testing
@@ -55,15 +54,13 @@ For a consistent development environment with all dependencies pre-configured:
    # Terminal 1: Start API server
    uv run uvicorn apps.api.main:app --reload --host 0.0.0.0 --port 8000
 
-   # Terminal 2: Start Celery workers
-   uv run celery -A apps.workers.main worker --loglevel=info
 
    # Terminal 3: Start Streamlit UI (optional)
    uv run streamlit run apps/streamlit_app/main.py --server.port=8501 --server.address=0.0.0.0
    ```
 
 **DevContainer Benefits:**
-- Pre-configured PostgreSQL and Redis services
+- Pre-configured PostgreSQL service
 - All VS Code extensions and settings installed
 - Consistent Python environment with uv
 - Pre-run database migrations
@@ -89,7 +86,7 @@ For development without DevContainers:
 
 3. **Start development services:**
    ```bash
-   docker compose up -d postgres redis
+   docker compose up -d postgres
    ```
 
 4. **Run database migrations:**
@@ -102,10 +99,6 @@ For development without DevContainers:
    uv run uvicorn apps.api.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-6. **Start Celery workers (in another terminal):**
-   ```bash
-   uv run celery -A apps.workers.main worker --loglevel=info
-   ```
 
 7. **Start Streamlit UI (optional):**
    ```bash
@@ -209,7 +202,7 @@ uv run secondbrain delete <vault-id>
 2. **Validation**: File format and content validation
 3. **Storage**: File stored in configured storage location
 4. **Extraction**: ZIP contents extracted and analyzed
-5. **Processing**: Background workers process vault content
+5. **Processing**: API service processes vault content synchronously
 6. **Analysis**: AI-powered content analysis and embedding generation
 
 ## 🔌 API Endpoints

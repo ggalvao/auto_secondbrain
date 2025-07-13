@@ -14,12 +14,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Database Operations
 - `uv run alembic upgrade head` - Apply database migrations
 - `uv run alembic revision --autogenerate -m "description"` - Create new migration
-- `docker compose up -d postgres redis` - Start required services
+- `docker compose up -d postgres` - Start required services
 
 ### Service Management
 - `docker compose up -d` - Start all services in development mode
 - `uv run uvicorn apps.api.main:app --reload --port 8000` - Start API server
-- `uv run celery -A apps.workers.main worker --loglevel=info` - Start Celery workers
+- `uv run uvicorn apps.api.main:app --reload --port 8000` - Start API server
 - `uv run streamlit run apps/streamlit_app/main.py --port 8501` - Start Streamlit UI
 
 ### CLI Tools
@@ -33,7 +33,6 @@ SecondBrain is a Python monorepo using uv for dependency management with the fol
 
 ### Core Services
 - **API Service** (`apps/api/`) - FastAPI backend with vault ingestion endpoints
-- **Workers** (`apps/workers/`) - Celery workers for background vault processing
 - **Streamlit App** (`apps/streamlit_app/`) - Web UI for vault management
 - **CLI** (`apps/cli/`) - Command-line administration tools
 
@@ -45,7 +44,7 @@ SecondBrain is a Python monorepo using uv for dependency management with the fol
 - **LLM Clients** (`libs/llm_clients/`) - OpenAI and Anthropic API wrappers
 
 ### Development Infrastructure
-- **Docker Compose** - Local development environment with PostgreSQL and Redis
+- **Docker Compose** - Local development environment with PostgreSQL
 - **Devcontainer** - VSCode development container configuration
 - **Alembic** - Database migration management
 - **Pre-commit hooks** - Code quality enforcement
@@ -55,7 +54,7 @@ SecondBrain is a Python monorepo using uv for dependency management with the fol
 ### Vault Processing Flow
 1. Upload via `/api/v1/vaults/upload` endpoint in `apps/api/routers/vault.py`
 2. File validation and storage in `apps/api/services/vault_service.py`
-3. Background processing triggered via Celery tasks in `apps/workers/tasks/vault_processing.py`
+3. Synchronous processing in `apps/api/services/vault_service.py`
 4. Status tracking through `VaultStatus` and `ProcessingStatus` enums
 
 ### Database Models
@@ -71,7 +70,7 @@ SecondBrain is a Python monorepo using uv for dependency management with the fol
 ### Error Handling
 - Structured logging with `structlog` throughout all services
 - HTTP exceptions in API layer with appropriate status codes
-- Celery task retries with exponential backoff
+- Robust error handling with proper HTTP status codes
 
 ## Testing Strategy
 
@@ -183,24 +182,25 @@ async def create_example(
     return await service.create_example(example_data)
 ```
 
-#### Celery Task Pattern
+#### Service Method Pattern
 ```python
-from celery import Task
-from apps.workers.main import celery_app
 import structlog
+from libs.models.vault import VaultStatus
 
 logger = structlog.get_logger()
 
-@celery_app.task(bind=True, autoretry_for=(Exception,), retry_kwargs={'max_retries': 3})
-def process_example(self: Task, example_id: str) -> dict[str, Any]:
-    """Process an example resource."""
-    try:
-        logger.info("Processing example", example_id=example_id)
-        # Implementation here
-        return {"status": "completed", "example_id": example_id}
-    except Exception as e:
-        logger.error("Example processing failed", example_id=example_id, error=str(e))
-        raise
+class ExampleService:
+    async def process_example(self, example_id: str) -> dict[str, Any]:
+        """Process an example resource."""
+        try:
+            logger.info("Processing example", example_id=example_id)
+            # Implementation here
+            return {"status": "completed", "example_id": example_id}
+        except Exception as e:
+            logger.error("Example processing failed", example_id=example_id, error=str(e))
+            # Update status to failed
+            await self.update_example_status(example_id, ExampleStatus.FAILED, str(e))
+            raise
 ```
 
 ### Error Handling Patterns
@@ -252,7 +252,7 @@ async def test_create_example(client: AsyncClient, db_session):
 
 - All Python code uses absolute imports from root level
 - Database sessions managed via FastAPI dependencies
-- Celery tasks are atomic and handle their own database connections
+- Service methods handle processing synchronously within API requests
 - Vector database currently uses in-memory implementation for development
 - Frontend placeholder exists but requires full implementation
 - All HTTP requests must include timeout parameters for security

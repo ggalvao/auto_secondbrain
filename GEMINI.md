@@ -4,7 +4,7 @@ This file provides guidance to Google Gemini when working with code in this Seco
 
 ## Project Overview
 
-SecondBrain is an AI-powered knowledge management system designed to process, analyze, and organize Obsidian vaults. The system uses a microservices architecture with FastAPI, Celery workers, and a Streamlit frontend, all orchestrated through Docker Compose.
+SecondBrain is an AI-powered knowledge management system designed to process, analyze, and organize Obsidian vaults. The system uses a microservices architecture with FastAPI and a Streamlit frontend, all orchestrated through Docker Compose.
 
 ## Quick Start Guide
 
@@ -19,7 +19,7 @@ SecondBrain is an AI-powered knowledge management system designed to process, an
 uv sync --dev
 
 # Start infrastructure services
-docker compose up -d postgres redis
+docker compose up -d postgres
 
 # Run database migrations
 uv run alembic upgrade head
@@ -35,7 +35,6 @@ docker compose up -d
 
 # Or run services individually:
 uv run uvicorn apps.api.main:app --reload --port 8000          # API
-uv run celery -A apps.workers.main worker --loglevel=info     # Workers
 uv run streamlit run apps/streamlit_app/main.py --port 8501   # UI
 ```
 
@@ -63,7 +62,6 @@ SecondBrain/
 │   ├── api/                # FastAPI backend
 │   ├── cli/                # Command-line tools
 │   ├── streamlit_app/      # Web interface
-│   └── workers/            # Celery background tasks
 ├── libs/                   # Shared libraries
 │   ├── cloud_storage/      # Storage providers (Google Drive)
 │   ├── database/           # DB connections and migrations
@@ -292,25 +290,16 @@ class VaultResponse(BaseModel):
         }
 ```
 
-### Background Task Patterns
+### Service Processing Patterns
 
-#### Celery Task Structure
+#### Synchronous Processing Structure
 ```python
-from celery import Task
-from celery.exceptions import Retry
-from apps.workers.main import celery_app
+from libs.models.vault import VaultStatus
 import structlog
 
 logger = structlog.get_logger()
 
-@celery_app.task(
-    bind=True,
-    autoretry_for=(ConnectionError, TimeoutError),
-    retry_kwargs={'max_retries': 3, 'countdown': 60},
-    soft_time_limit=300,
-    time_limit=600
-)
-def process_vault_content(self: Task, vault_id: str, processing_options: Dict[str, Any]) -> Dict[str, Any]:
+async def process_vault_content(self, vault_id: str, processing_options: Dict[str, Any]) -> Dict[str, Any]:
     """Process vault content with AI analysis."""
     try:
         logger.info("Starting vault processing", vault_id=vault_id, task_id=self.request.id)

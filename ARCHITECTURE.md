@@ -10,7 +10,6 @@ The project is a monorepo with several applications under the `apps` directory a
   - `api/`: A FastAPI application that serves as the main backend.
   - `cli/`: A command-line interface.
   - `streamlit_app/`: A Streamlit application for the user interface.
-  - `workers/`: A Celery application for background tasks.
 - `libs/`: Contains shared libraries used by the different applications.
 - `infra/`: Contains the Dockerfiles for the different services.
 - `.devcontainer/`: Contains the configuration for the VS Code dev container.
@@ -21,9 +20,6 @@ The project is a monorepo with several applications under the `apps` directory a
 
 The `api` application is a FastAPI application that serves as the main backend. It provides a RESTful API to interact with the system's resources.
 
-### Workers
-
-The `workers` application is a Celery application that handles background tasks, such as processing large files or sending notifications. It uses Redis as a message broker.
 
 ### Streamlit App
 
@@ -36,7 +32,6 @@ The `cli` application is a command-line interface that allows interacting with t
 ## Libraries and Tools
 
 - **FastAPI**: A modern, fast (high-performance), web framework for building APIs with Python 3.11+ based on standard Python type hints.
-- **Celery**: An asynchronous task queue/job queue based on distributed message passing.
 - **Streamlit**: A faster way to build and share data apps.
 - **SQLAlchemy**: The Python SQL Toolkit and Object Relational Mapper.
 - **Alembic**: A lightweight database migration tool for usage with the SQLAlchemy Database Toolkit for Python.
@@ -56,9 +51,7 @@ The project uses Docker and Docker Compose to create a consistent and reproducib
 The `docker-compose.yml` file at the root of the repository defines the main services of the project:
 
 - `postgres`: A PostgreSQL database to store the system's data.
-- `redis`: A Redis instance used as a message broker for Celery.
 - `api`: The FastAPI application.
-- `workers`: The Celery application.
 - `streamlit`: The Streamlit application.
 
 ### `.devcontainer/docker-compose.dev.yml`
